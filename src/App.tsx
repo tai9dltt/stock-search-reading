@@ -180,7 +180,7 @@ export default function App() {
                   {activeTab === 'overview' && (
                     <div className="space-y-8">
                       {/* Key Info Section */}
-                      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                         <div className="border border-[#141414] p-4 bg-white">
                           <div className="text-[10px] uppercase tracking-widest opacity-50 mb-1">Ngành nghề</div>
                           <div className="font-serif italic text-lg">{analysis.keyInfo.industry}</div>
@@ -197,9 +197,13 @@ export default function App() {
                           <div className="text-[10px] uppercase tracking-widest opacity-50 mb-1">Giá 52 Tuần</div>
                           <div className="font-serif italic text-lg">{analysis.keyInfo.minMax52W}</div>
                         </div>
-                        <div className="border border-[#141414] p-4 bg-white col-span-2 md:col-span-1">
+                        <div className="border border-[#141414] p-4 bg-white">
                           <div className="text-[10px] uppercase tracking-widest opacity-50 mb-1">CP Lưu hành</div>
                           <div className="font-serif italic text-lg">{analysis.keyInfo.outstandingShares}</div>
+                        </div>
+                        <div className="border border-[#141414] p-4 bg-white">
+                          <div className="text-[10px] uppercase tracking-widest opacity-50 mb-1">Sở hữu Nước ngoài</div>
+                          <div className="font-serif italic text-lg">{analysis.keyInfo.foreignOwnership}</div>
                         </div>
                       </div>
 

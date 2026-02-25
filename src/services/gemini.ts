@@ -36,6 +36,7 @@ export interface StockOverview {
     exchange: string;
     minMax52W: string;
     outstandingShares: string;
+    foreignOwnership: string;
   };
   analystReports: {
     broker: string;
@@ -48,7 +49,7 @@ export interface StockOverview {
 }
 
 export async function analyzeStock(symbol: string): Promise<StockOverview> {
-  const cacheKey = `stock_overview_v4_${symbol}`;
+  const cacheKey = `stock_overview_v5_${symbol}`;
   const cached = getCachedData<StockOverview>(cacheKey);
   if (cached) return cached;
 
@@ -78,7 +79,8 @@ export async function analyzeStock(symbol: string): Promise<StockOverview> {
       "peRatio": "P/E",
       "exchange": "Sàn giao dịch (chỉ trả về đúng 1 chữ: 'hose', 'hnx', hoặc 'upcom')",
       "minMax52W": "Giá thấp nhất - cao nhất 52 tuần (VD: 20.000 - 35.000)",
-      "outstandingShares": "Số lượng CP lưu hành (VD: 1.2 tỷ CP)"
+      "outstandingShares": "Số lượng CP lưu hành (VD: 1.2 tỷ CP)",
+      "foreignOwnership": "Tỷ lệ sở hữu nước ngoài (VD: 49%, 15.5%, hoặc N/A)"
     },
     "analystReports": [
       {
@@ -114,9 +116,10 @@ export async function analyzeStock(symbol: string): Promise<StockOverview> {
               peRatio: { type: Type.STRING },
               exchange: { type: Type.STRING },
               minMax52W: { type: Type.STRING },
-              outstandingShares: { type: Type.STRING }
+              outstandingShares: { type: Type.STRING },
+              foreignOwnership: { type: Type.STRING }
             },
-            required: ["industry", "marketCap", "peRatio", "exchange", "minMax52W", "outstandingShares"]
+            required: ["industry", "marketCap", "peRatio", "exchange", "minMax52W", "outstandingShares", "foreignOwnership"]
           },
           analystReports: {
             type: Type.ARRAY,
@@ -147,7 +150,7 @@ export async function analyzeStock(symbol: string): Promise<StockOverview> {
     console.error("Failed to parse JSON", e);
     return {
       analysisMarkdown: "Không thể phân tích dữ liệu lúc này.",
-      keyInfo: { industry: "N/A", marketCap: "N/A", peRatio: "N/A", exchange: "hose", minMax52W: "N/A", outstandingShares: "N/A" },
+      keyInfo: { industry: "N/A", marketCap: "N/A", peRatio: "N/A", exchange: "hose", minMax52W: "N/A", outstandingShares: "N/A", foreignOwnership: "N/A" },
       analystReports: []
     };
   }
