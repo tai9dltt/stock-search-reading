@@ -1,18 +1,19 @@
 import React, { useState } from 'react';
 import { Search, TrendingUp, BarChart3, Newspaper, Loader2, ArrowUpRight } from 'lucide-react';
-import { analyzeStock } from './services/gemini';
+import { analyzeStock, StockOverview } from './services/gemini';
 import Markdown from 'react-markdown';
 import { cn } from './lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { FundamentalChart } from './components/FundamentalChart';
 import { NewsAnalysis } from './components/NewsAnalysis';
+import { CapitalHistory } from './components/CapitalHistory';
 
-type Tab = 'overview' | 'fundamentals' | 'news';
+type Tab = 'overview' | 'fundamentals' | 'news' | 'capital';
 
 export default function App() {
   const [symbol, setSymbol] = useState('');
   const [loading, setLoading] = useState(false);
-  const [analysis, setAnalysis] = useState<string | null>(null);
+  const [analysis, setAnalysis] = useState<StockOverview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [currentSymbol, setCurrentSymbol] = useState<string | null>(null);
@@ -144,6 +145,12 @@ export default function App() {
                   >
                     Tin tức
                   </button>
+                  <button 
+                    onClick={() => setActiveTab('capital')}
+                    className={cn("px-4 py-2 text-sm font-mono border border-[#141414] transition-colors", activeTab === 'capital' ? "bg-[#141414] text-[#E4E3E0]" : "hover:bg-gray-100")}
+                  >
+                    Tăng vốn
+                  </button>
                 </div>
               </div>
 
@@ -159,11 +166,11 @@ export default function App() {
                   </div>
                   
                   <div className="border border-[#141414] p-4">
-                    <div className="text-[10px] uppercase tracking-wider opacity-50 mb-1">Quick Links</div>
+                    <div className="text-[10px] uppercase tracking-wider opacity-50 mb-1">CafeF Links</div>
                     <ul className="space-y-2 text-sm font-mono">
-                      <li><a href={`https://finance.vietstock.vn/${currentSymbol}`} target="_blank" rel="noreferrer" className="hover:underline flex items-center justify-between">Vietstock <ArrowUpRight className="w-3 h-3" /></a></li>
-                      <li><a href={`https://cafef.vn/tim-kiem/${currentSymbol}.chn`} target="_blank" rel="noreferrer" className="hover:underline flex items-center justify-between">CafeF <ArrowUpRight className="w-3 h-3" /></a></li>
-                      <li><a href={`https://banggia.vndirect.com.vn/chung-khoan/${currentSymbol}`} target="_blank" rel="noreferrer" className="hover:underline flex items-center justify-between">VNDirect <ArrowUpRight className="w-3 h-3" /></a></li>
+                      <li><a href={`https://s.cafef.vn/${analysis.keyInfo.exchange?.toLowerCase() || 'hose'}/${currentSymbol.toLowerCase()}.chn`} target="_blank" rel="noreferrer" className="hover:underline flex items-center justify-between">Tổng quan <ArrowUpRight className="w-3 h-3" /></a></li>
+                      <li><a href={`https://cafef.vn/du-lieu/${analysis.keyInfo.exchange?.toLowerCase() || 'hose'}/${currentSymbol.toLowerCase()}-tin-tuc.chn`} target="_blank" rel="noreferrer" className="hover:underline flex items-center justify-between">Tin tức <ArrowUpRight className="w-3 h-3" /></a></li>
+                      <li><a href={`https://cafef.vn/du-lieu/phan-tich-bao-cao.chn`} target="_blank" rel="noreferrer" className="hover:underline flex items-center justify-between">Báo cáo phân tích <ArrowUpRight className="w-3 h-3" /></a></li>
                     </ul>
                   </div>
                 </div>
@@ -171,13 +178,90 @@ export default function App() {
                 {/* Main Content */}
                 <div className="lg:col-span-3">
                   {activeTab === 'overview' && (
-                    <div className="prose prose-sm max-w-none 
-                      prose-headings:font-serif prose-headings:italic prose-headings:mt-8 prose-headings:mb-4
-                      prose-p:font-sans prose-p:leading-relaxed prose-p:mb-4
-                      prose-strong:font-bold prose-strong:text-[#141414]
-                      prose-ul:list-disc prose-ul:pl-5 prose-ul:mb-4
-                      prose-li:mb-1">
-                      <Markdown>{analysis}</Markdown>
+                    <div className="space-y-8">
+                      {/* Key Info Section */}
+                      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                        <div className="border border-[#141414] p-4 bg-white">
+                          <div className="text-[10px] uppercase tracking-widest opacity-50 mb-1">Ngành nghề</div>
+                          <div className="font-serif italic text-lg">{analysis.keyInfo.industry}</div>
+                        </div>
+                        <div className="border border-[#141414] p-4 bg-white">
+                          <div className="text-[10px] uppercase tracking-widest opacity-50 mb-1">Vốn hóa</div>
+                          <div className="font-serif italic text-lg">{analysis.keyInfo.marketCap}</div>
+                        </div>
+                        <div className="border border-[#141414] p-4 bg-white">
+                          <div className="text-[10px] uppercase tracking-widest opacity-50 mb-1">P/E Ratio</div>
+                          <div className="font-serif italic text-lg">{analysis.keyInfo.peRatio}</div>
+                        </div>
+                        <div className="border border-[#141414] p-4 bg-white">
+                          <div className="text-[10px] uppercase tracking-widest opacity-50 mb-1">Giá 52 Tuần</div>
+                          <div className="font-serif italic text-lg">{analysis.keyInfo.minMax52W}</div>
+                        </div>
+                        <div className="border border-[#141414] p-4 bg-white col-span-2 md:col-span-1">
+                          <div className="text-[10px] uppercase tracking-widest opacity-50 mb-1">CP Lưu hành</div>
+                          <div className="font-serif italic text-lg">{analysis.keyInfo.outstandingShares}</div>
+                        </div>
+                      </div>
+
+                      {/* Main Markdown Analysis */}
+                      <div className="prose prose-sm max-w-none 
+                        prose-headings:font-serif prose-headings:italic prose-headings:text-2xl prose-headings:mt-8 prose-headings:mb-4 prose-headings:border-b prose-headings:border-[#141414]/10 prose-headings:pb-2
+                        prose-p:font-sans prose-p:leading-relaxed prose-p:mb-4 prose-p:text-gray-800
+                        prose-strong:font-semibold prose-strong:text-[#141414]
+                        prose-ul:list-disc prose-ul:pl-5 prose-ul:mb-6 prose-ul:space-y-2
+                        prose-li:text-gray-800 prose-li:leading-relaxed
+                        bg-white border border-[#141414] p-6 md:p-8">
+                        <Markdown>
+                          {analysis.analysisMarkdown
+                            .replace(/\\n/g, '\n')
+                            .replace(/(## .*?)\n+/g, '$1\n\n')
+                            .replace(/\n+(## )/g, '\n\n$1')}
+                        </Markdown>
+                      </div>
+
+                      {/* Analyst Reports Section */}
+                      {analysis.analystReports && analysis.analystReports.length > 0 && (
+                        <div className="mt-12">
+                          <h3 className="font-serif italic text-2xl mb-6 border-b border-[#141414] pb-2">Báo cáo Phân tích & Dự báo</h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {analysis.analystReports.map((report, idx) => (
+                              <div key={idx} className="border border-[#141414] p-5 bg-white flex flex-col justify-between">
+                                <div>
+                                  <div className="flex justify-between items-start mb-3">
+                                    <div className="font-bold text-lg">{report.broker}</div>
+                                    <div className="text-xs font-mono opacity-60">{report.date}</div>
+                                  </div>
+                                  <div className="flex gap-4 mb-4">
+                                    <div>
+                                      <div className="text-[10px] uppercase tracking-widest opacity-50">Giá mục tiêu</div>
+                                      <div className="font-mono font-medium">{report.targetPrice}</div>
+                                    </div>
+                                    <div>
+                                      <div className="text-[10px] uppercase tracking-widest opacity-50">Khuyến nghị</div>
+                                      <div className={cn(
+                                        "font-mono font-medium",
+                                        report.recommendation.toUpperCase().includes('MUA') || report.recommendation.toUpperCase().includes('BUY') || report.recommendation.toUpperCase().includes('KHẢ QUAN') ? 'text-green-600' :
+                                        report.recommendation.toUpperCase().includes('BÁN') || report.recommendation.toUpperCase().includes('SELL') || report.recommendation.toUpperCase().includes('KÉM KHẢ QUAN') ? 'text-red-600' :
+                                        'text-yellow-600'
+                                      )}>
+                                        {report.recommendation}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <p className="text-sm opacity-80 leading-relaxed mb-4">
+                                    {report.summary}
+                                  </p>
+                                </div>
+                                {report.url && (
+                                  <a href={report.url} target="_blank" rel="noreferrer" className="text-xs font-mono hover:underline flex items-center gap-1 self-start">
+                                    Xem báo cáo <ArrowUpRight className="w-3 h-3" />
+                                  </a>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                   
@@ -187,6 +271,10 @@ export default function App() {
                   
                   {activeTab === 'news' && (
                     <NewsAnalysis symbol={currentSymbol} />
+                  )}
+                  
+                  {activeTab === 'capital' && (
+                    <CapitalHistory symbol={currentSymbol} />
                   )}
                 </div>
               </div>
@@ -198,7 +286,7 @@ export default function App() {
       {/* Footer */}
       <footer className="border-t border-[#141414] p-6 mt-12 text-[10px] uppercase tracking-[0.2em] opacity-40 flex justify-between items-center">
         <div>© 2026 VNStock Insights</div>
-        <div>Data powered by Google Search & Gemini AI</div>
+        <div>Data powered by Google Search</div>
       </footer>
     </div>
   );
