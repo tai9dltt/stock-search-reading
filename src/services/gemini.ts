@@ -30,6 +30,7 @@ function setCachedData(key: string, data: any) {
 export interface StockOverview {
   analysisMarkdown: string;
   keyInfo: {
+    currentPrice: string;
     industry: string;
     marketCap: string;
     peRatio: string;
@@ -37,6 +38,7 @@ export interface StockOverview {
     minMax52W: string;
     outstandingShares: string;
     foreignOwnership: string;
+    overviewUrl: string;
   };
   analystReports: {
     broker: string;
@@ -49,7 +51,7 @@ export interface StockOverview {
 }
 
 export async function analyzeStock(symbol: string): Promise<StockOverview> {
-  const cacheKey = `stock_overview_v5_${symbol}`;
+  const cacheKey = `stock_overview_v7_${symbol}`;
   const cached = getCachedData<StockOverview>(cacheKey);
   if (cached) return cached;
 
@@ -57,6 +59,7 @@ export async function analyzeStock(symbol: string): Promise<StockOverview> {
   
   const prompt = `Đóng vai trò là một chuyên gia phân tích chứng khoán cấp cao. Hãy tổng hợp và viết một bài phân tích CỰC KỲ CHI TIẾT VÀ CHUYÊN SÂU về cổ phiếu ${symbol} trên thị trường chứng khoán Việt Nam.
   Sử dụng Google Search để tìm kiếm thông tin, CHỈ TẬP TRUNG VÀO NGUỒN CAFEF.VN (tìm kiếm các báo cáo phân tích, kết quả kinh doanh, tin tức chuyên sâu).
+  Đặc biệt, hãy tìm chính xác đường dẫn URL trang tổng quan/hồ sơ công ty của cổ phiếu ${symbol} trên cafef.vn (thường có dạng https://cafef.vn/du-lieu/hose/ssi-cong-ty-co-phan-chung-khoan-ssi.chn).
   
   Bài phân tích (analysisMarkdown) phải đóng vai trò như một BÁO CÁO TỔNG HỢP (Synthesis Report) từ các công ty chứng khoán, bao gồm các phần sau (sử dụng Heading ## cho mỗi phần):
   ## 1. Tổng quan & Vị thế doanh nghiệp
@@ -74,13 +77,15 @@ export async function analyzeStock(symbol: string): Promise<StockOverview> {
   {
     "analysisMarkdown": "Bài phân tích siêu chi tiết bằng Markdown. BẮT BUỘC dùng dấu xuống dòng thật (newline). PHẢI CÓ 1 DÒNG TRỐNG (blank line) sau mỗi Heading (##) và giữa các đoạn văn để dễ nhìn.",
     "keyInfo": {
+      "currentPrice": "Giá cổ phiếu hiện tại (VD: 35.500 VNĐ)",
       "industry": "Ngành nghề",
       "marketCap": "Vốn hóa",
       "peRatio": "P/E",
       "exchange": "Sàn giao dịch (chỉ trả về đúng 1 chữ: 'hose', 'hnx', hoặc 'upcom')",
       "minMax52W": "Giá thấp nhất - cao nhất 52 tuần (VD: 20.000 - 35.000)",
       "outstandingShares": "Số lượng CP lưu hành (VD: 1.2 tỷ CP)",
-      "foreignOwnership": "Tỷ lệ sở hữu nước ngoài (VD: 49%, 15.5%, hoặc N/A)"
+      "foreignOwnership": "Tỷ lệ sở hữu nước ngoài (VD: 49%, 15.5%, hoặc N/A)",
+      "overviewUrl": "Đường dẫn URL chính xác trang tổng quan hồ sơ công ty trên cafef.vn (VD: https://cafef.vn/du-lieu/hose/ssi-cong-ty-co-phan-chung-khoan-ssi.chn)"
     },
     "analystReports": [
       {
@@ -111,15 +116,17 @@ export async function analyzeStock(symbol: string): Promise<StockOverview> {
           keyInfo: {
             type: Type.OBJECT,
             properties: {
+              currentPrice: { type: Type.STRING },
               industry: { type: Type.STRING },
               marketCap: { type: Type.STRING },
               peRatio: { type: Type.STRING },
               exchange: { type: Type.STRING },
               minMax52W: { type: Type.STRING },
               outstandingShares: { type: Type.STRING },
-              foreignOwnership: { type: Type.STRING }
+              foreignOwnership: { type: Type.STRING },
+              overviewUrl: { type: Type.STRING }
             },
-            required: ["industry", "marketCap", "peRatio", "exchange", "minMax52W", "outstandingShares", "foreignOwnership"]
+            required: ["currentPrice", "industry", "marketCap", "peRatio", "exchange", "minMax52W", "outstandingShares", "foreignOwnership", "overviewUrl"]
           },
           analystReports: {
             type: Type.ARRAY,
@@ -150,7 +157,7 @@ export async function analyzeStock(symbol: string): Promise<StockOverview> {
     console.error("Failed to parse JSON", e);
     return {
       analysisMarkdown: "Không thể phân tích dữ liệu lúc này.",
-      keyInfo: { industry: "N/A", marketCap: "N/A", peRatio: "N/A", exchange: "hose", minMax52W: "N/A", outstandingShares: "N/A", foreignOwnership: "N/A" },
+      keyInfo: { currentPrice: "N/A", industry: "N/A", marketCap: "N/A", peRatio: "N/A", exchange: "hose", minMax52W: "N/A", outstandingShares: "N/A", foreignOwnership: "N/A", overviewUrl: `https://s.cafef.vn/Lich-su-giao-dich-${symbol.toUpperCase()}-1.chn` },
       analystReports: []
     };
   }

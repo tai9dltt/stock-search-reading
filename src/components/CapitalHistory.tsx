@@ -51,7 +51,7 @@ export function CapitalHistory({ symbol }: { symbol: string }) {
     <div className="border border-[#141414] p-6 bg-white">
       <div className="flex items-center gap-3 mb-6">
         <History className="w-6 h-6" />
-        <h3 className="font-serif italic text-2xl">Lịch sử Tăng vốn & Phát hành</h3>
+        <h3 className="font-serif font-bold text-2xl">Lịch sử Tăng vốn & Phát hành</h3>
       </div>
       
       {data.length === 0 ? (

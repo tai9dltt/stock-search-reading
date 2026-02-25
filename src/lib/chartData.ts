@@ -6,6 +6,8 @@ export function generateFundamentalData(symbol: string, period: 'QUARTER' | 'YEA
   
   const baseRevenue = 1000 + (Math.abs(hash) % 9000); // 1k to 10k billion VND
   const baseMargin = 0.05 + ((Math.abs(hash) % 20) / 100); // 5% to 25%
+  const basePE = 10 + (Math.abs(hash) % 15); // 10 to 25
+  const marketBasePE = 14;
   
   const data = [];
   const points = period === 'YEAR' ? 5 : 8; // 5 years or 8 quarters
@@ -39,13 +41,18 @@ export function generateFundamentalData(symbol: string, period: 'QUARTER' | 'YEA
     
     const profitGrowth = prevProfit > 0 ? (profit - prevProfit) / prevProfit : 0;
     
+    const stockPE = Math.max(5, basePE + Math.sin(i) * 5 + (Math.random() * 4 - 2));
+    const marketPE = Math.max(8, marketBasePE + Math.sin(i * 0.5) * 2 + (Math.random() * 2 - 1));
+    
     data.push({
       label,
       revenue: Math.round(revenue),
       profit: Math.round(profit),
       margin: Number((margin * 100).toFixed(1)),
       revGrowth: Number((revGrowth * 100).toFixed(1)),
-      profitGrowth: Number((profitGrowth * 100).toFixed(1))
+      profitGrowth: Number((profitGrowth * 100).toFixed(1)),
+      stockPE: Number(stockPE.toFixed(1)),
+      marketPE: Number(marketPE.toFixed(1))
     });
     
     prevRev = revenue;

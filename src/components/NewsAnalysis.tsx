@@ -53,13 +53,13 @@ export function NewsAnalysis({ symbol }: { symbol: string }) {
 
   return (
     <div className="border border-[#141414] p-6 bg-white">
-      <h3 className="font-serif italic text-2xl mb-6">Phân tích Tin tức & Tâm lý</h3>
+      <h3 className="font-serif font-bold text-2xl mb-6">Phân tích Tin tức & Tâm lý</h3>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="col-span-1 border border-[#141414] p-6 flex flex-col items-center justify-center text-center">
           <div className="text-[10px] uppercase tracking-widest opacity-50 mb-4">Market Sentiment</div>
           <SentimentIcon className={cn("w-12 h-12 mb-2", sentimentColor)} />
-          <div className={cn("font-serif italic text-3xl", sentimentColor)}>{data.sentiment}</div>
+          <div className={cn("font-serif font-bold text-3xl", sentimentColor)}>{data.sentiment}</div>
           <div className="font-mono text-sm mt-2 opacity-70">Score: {data.score}/100</div>
         </div>
         
@@ -82,7 +82,7 @@ export function NewsAnalysis({ symbol }: { symbol: string }) {
             >
               <div className="flex justify-between items-start gap-4">
                 <div>
-                  <h4 className="font-serif font-medium mb-1 group-hover:underline">{article.title}</h4>
+                  <h4 className="font-serif font-semibold mb-1 group-hover:underline">{article.title}</h4>
                   <div className="flex items-center gap-3 text-xs font-mono opacity-60">
                     <span>{article.source}</span>
                     <span>•</span>

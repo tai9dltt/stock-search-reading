@@ -14,7 +14,7 @@ export function FundamentalChart({ symbol }: { symbol: string }) {
   return (
     <div className="border border-[#141414] p-6 bg-white">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-        <h3 className="font-serif italic text-2xl">Chỉ số tài chính</h3>
+        <h3 className="font-serif font-bold text-2xl">Chỉ số tài chính</h3>
         
         <div className="flex flex-wrap gap-4">
           <div className="flex gap-2">
