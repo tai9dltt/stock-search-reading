@@ -1,0 +1,5 @@
+{
+  "name": "VNStock Insights",
+  "description": "Ứng dụng phân tích cổ phiếu Việt Nam thông minh sử dụng Gemini AI và Google Search.",
+  "requestFramePermissions": []
+}
