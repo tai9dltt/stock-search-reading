@@ -20,13 +20,13 @@ export function FundamentalChart({ symbol }: { symbol: string }) {
           <div className="flex gap-2">
             <button
               onClick={() => setView('ABSOLUTE')}
-              className={cn("px-3 py-1 text-xs font-mono border border-[#141414] transition-colors", view === 'ABSOLUTE' ? "bg-[#141414] text-[#E4E3E0]" : "hover:bg-gray-100")}
+              className={cn("px-3 py-1 text-xs font-mono border border-[#141414] transition-colors cursor-pointer", view === 'ABSOLUTE' ? "bg-[#141414] text-[#E4E3E0]" : "hover:bg-gray-100")}
             >
               KQKD
             </button>
             <button
               onClick={() => setView('GROWTH')}
-              className={cn("px-3 py-1 text-xs font-mono border border-[#141414] transition-colors", view === 'GROWTH' ? "bg-[#141414] text-[#E4E3E0]" : "hover:bg-gray-100")}
+              className={cn("px-3 py-1 text-xs font-mono border border-[#141414] transition-colors cursor-pointer", view === 'GROWTH' ? "bg-[#141414] text-[#E4E3E0]" : "hover:bg-gray-100")}
             >
               Tăng trưởng
             </button>
@@ -35,13 +35,13 @@ export function FundamentalChart({ symbol }: { symbol: string }) {
           <div className="flex gap-2">
             <button
               onClick={() => setPeriod('QUARTER')}
-              className={cn("px-3 py-1 text-xs font-mono border border-[#141414] transition-colors", period === 'QUARTER' ? "bg-[#141414] text-[#E4E3E0]" : "hover:bg-gray-100")}
+              className={cn("px-3 py-1 text-xs font-mono border border-[#141414] transition-colors cursor-pointer", period === 'QUARTER' ? "bg-[#141414] text-[#E4E3E0]" : "hover:bg-gray-100")}
             >
               Theo Quý
             </button>
             <button
               onClick={() => setPeriod('YEAR')}
-              className={cn("px-3 py-1 text-xs font-mono border border-[#141414] transition-colors", period === 'YEAR' ? "bg-[#141414] text-[#E4E3E0]" : "hover:bg-gray-100")}
+              className={cn("px-3 py-1 text-xs font-mono border border-[#141414] transition-colors cursor-pointer", period === 'YEAR' ? "bg-[#141414] text-[#E4E3E0]" : "hover:bg-gray-100")}
             >
               Theo Năm
             </button>

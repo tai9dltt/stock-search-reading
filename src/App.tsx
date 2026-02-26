@@ -1,14 +1,77 @@
 import React, { useState } from 'react';
-import { Search, TrendingUp, BarChart3, Newspaper, Loader2, ArrowUpRight } from 'lucide-react';
+import { Search, TrendingUp, BarChart3, Newspaper, Loader2, ArrowUpRight, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { analyzeStock, StockOverview } from './services/gemini';
 import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { toPng } from 'html-to-image';
+import jsPDF from 'jspdf';
 import { cn } from './lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { FundamentalChart } from './components/FundamentalChart';
 import { NewsAnalysis } from './components/NewsAnalysis';
 import { CapitalHistory } from './components/CapitalHistory';
+import { TopStocks } from './components/TopStocks';
+import BUDDHIST_QUOTES from './data/quotes.json';
 
 type Tab = 'overview' | 'fundamentals' | 'news' | 'capital';
+
+export function LoadingQuote() {
+  const [quoteIndex, setQuoteIndex] = useState(() => Math.floor(Math.random() * BUDDHIST_QUOTES.length));
+
+  const handlePrev = () => {
+    setQuoteIndex((prev) => (prev - 1 + BUDDHIST_QUOTES.length) % BUDDHIST_QUOTES.length);
+  };
+
+  const handleNext = () => {
+    setQuoteIndex((prev) => (prev + 1) % BUDDHIST_QUOTES.length);
+  };
+
+  return (
+    <div className="mt-12 max-w-lg mx-auto p-6 border border-[#141414]/20 bg-white/50 rounded-lg shadow-sm">
+      <div className="text-[10px] uppercase tracking-widest opacity-50 mb-4 font-mono">Góc tĩnh tâm (Kinh điển Nguyên thủy)</div>
+      
+      <div className="relative px-8 min-h-[100px] flex items-center justify-center">
+        <button 
+          onClick={handlePrev}
+          className="absolute left-0 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-[#141414] transition-colors cursor-pointer"
+          title="Câu trước"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={quoteIndex}
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -5 }}
+            transition={{ duration: 0.3 }}
+            className="font-serif text-lg md:text-xl leading-relaxed italic text-gray-800"
+          >
+            "{BUDDHIST_QUOTES[quoteIndex]}"
+          </motion.div>
+        </AnimatePresence>
+
+        <button 
+          onClick={handleNext}
+          className="absolute right-0 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-[#141414] transition-colors cursor-pointer"
+          title="Câu tiếp theo"
+        >
+          <ChevronRight className="w-5 h-5" />
+        </button>
+      </div>
+
+      <div className="mt-6 flex justify-center gap-1.5 flex-wrap max-w-xs mx-auto">
+        {BUDDHIST_QUOTES.map((_, idx) => (
+          <div 
+            key={idx} 
+            className={cn("w-1.5 h-1.5 rounded-full transition-colors", idx === quoteIndex ? "bg-[#141414]" : "bg-[#141414]/20")}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function App() {
   const [symbol, setSymbol] = useState('');
@@ -17,12 +80,16 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [currentSymbol, setCurrentSymbol] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!symbol.trim()) return;
+  const handleSelectStock = (selectedSymbol: string) => {
+    setSymbol(selectedSymbol);
+    const e = { preventDefault: () => {} } as React.FormEvent;
+    // We need to trigger the search logic
+    triggerSearch(selectedSymbol);
+  };
 
-    const searchSymbol = symbol.toUpperCase();
+  const triggerSearch = async (searchSymbol: string) => {
     setLoading(true);
     setError(null);
     setCurrentSymbol(searchSymbol);
@@ -39,31 +106,115 @@ export default function App() {
     }
   };
 
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!symbol.trim()) return;
+    triggerSearch(symbol.toUpperCase());
+  };
+
+  const handleExportPDF = async () => {
+    const element = document.getElementById('pdf-content');
+    if (!element || !currentSymbol) return;
+    
+    setIsExporting(true);
+    try {
+      // Create a temporary clone of the element to format it for PDF
+      const clone = element.cloneNode(true) as HTMLElement;
+      
+      // Apply specific styles for the PDF clone
+      clone.style.width = '1200px'; // Force desktop width
+      clone.style.padding = '40px';
+      clone.style.backgroundColor = '#E4E3E0';
+      clone.style.position = 'absolute';
+      clone.style.left = '-9999px';
+      clone.style.top = '0';
+      
+      // Remove elements we don't want in the PDF
+      const hiddenElements = clone.querySelectorAll('.print\\:hidden');
+      hiddenElements.forEach(el => el.remove());
+      
+      // Fix grid layouts
+      const gridElements = clone.querySelectorAll('.lg\\:col-span-3');
+      gridElements.forEach(el => {
+        (el as HTMLElement).style.gridColumn = 'span 4 / span 4';
+      });
+      
+      document.body.appendChild(clone);
+      
+      const dataUrl = await toPng(clone, {
+        cacheBust: true,
+        backgroundColor: '#E4E3E0',
+        pixelRatio: 2,
+        style: {
+          transform: 'scale(1)',
+          transformOrigin: 'top left'
+        }
+      });
+      
+      document.body.removeChild(clone);
+      
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      const img = new Image();
+      img.src = dataUrl;
+      await new Promise((resolve) => {
+        img.onload = resolve;
+      });
+      
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (img.height * pdfWidth) / img.width;
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      
+      let heightLeft = pdfHeight;
+      let position = 0;
+      
+      pdf.addImage(dataUrl, 'PNG', 0, position, pdfWidth, pdfHeight);
+      heightLeft -= pageHeight;
+      
+      while (heightLeft >= 0) {
+        position = heightLeft - pdfHeight;
+        pdf.addPage();
+        pdf.addImage(dataUrl, 'PNG', 0, position, pdfWidth, pdfHeight);
+        heightLeft -= pageHeight;
+      }
+      
+      pdf.save(`VNStock_${currentSymbol}_Analysis.pdf`);
+    } catch (error) {
+      console.error('Lỗi khi xuất PDF:', error);
+      alert('Không thể xuất PDF. Vui lòng thử lại.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#E4E3E0] text-[#141414] font-sans selection:bg-[#141414] selection:text-[#E4E3E0]">
       {/* Header */}
-      <header className="border-b border-[#141414] p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="font-serif font-bold text-3xl tracking-tight">VNStock Insights</h1>
-          <p className="text-xs uppercase tracking-widest opacity-60 mt-1">Phân tích thị trường thông minh</p>
+      <header className="sticky top-0 z-50 bg-[#E4E3E0]/80 backdrop-blur-md border-b border-[#141414] print:hidden">
+        <div className="max-w-7xl mx-auto p-4 md:py-3 md:px-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <h1 className="font-serif font-bold text-2xl tracking-tight">VNStock Insights</h1>
+          
+          <form onSubmit={handleSearch} className="relative group">
+            <input
+              type="text"
+              value={symbol}
+              onChange={(e) => setSymbol(e.target.value)}
+              placeholder="Nhập mã cổ phiếu (VD: VNM, HPG...)"
+              className="bg-transparent border border-[#141414] px-4 py-1.5 pr-10 w-full md:w-64 focus:outline-none focus:ring-1 focus:ring-[#141414] transition-all text-sm"
+            />
+            <button 
+              type="submit" 
+              disabled={loading}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:opacity-70 transition-opacity disabled:opacity-30 cursor-pointer"
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+            </button>
+          </form>
         </div>
-        
-        <form onSubmit={handleSearch} className="relative group">
-          <input
-            type="text"
-            value={symbol}
-            onChange={(e) => setSymbol(e.target.value)}
-            placeholder="Nhập mã cổ phiếu (VD: VNM, HPG...)"
-            className="bg-transparent border border-[#141414] px-4 py-2 pr-10 w-full md:w-64 focus:outline-none focus:ring-1 focus:ring-[#141414] transition-all"
-          />
-          <button 
-            type="submit" 
-            disabled={loading}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:opacity-70 transition-opacity disabled:opacity-30"
-          >
-            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
-          </button>
-        </form>
       </header>
 
       <main className="max-w-7xl mx-auto p-6">
@@ -73,23 +224,8 @@ export default function App() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12"
             >
-              <div className="border border-[#141414] p-8 flex flex-col gap-4 hover:bg-[#141414] hover:text-[#E4E3E0] transition-colors cursor-default">
-                <TrendingUp className="w-8 h-8" />
-                <h3 className="font-serif font-semibold text-xl">Dữ liệu thời gian thực</h3>
-                <p className="text-sm opacity-80">Truy cập dữ liệu mới nhất từ HOSE và HNX thông qua Google Search Grounding.</p>
-              </div>
-              <div className="border border-[#141414] p-8 flex flex-col gap-4 hover:bg-[#141414] hover:text-[#E4E3E0] transition-colors cursor-default">
-                <BarChart3 className="w-8 h-8" />
-                <h3 className="font-serif font-semibold text-xl">Biểu đồ tài chính</h3>
-                <p className="text-sm opacity-80">Trực quan hóa doanh thu, lợi nhuận, biên lợi nhuận và tốc độ tăng trưởng.</p>
-              </div>
-              <div className="border border-[#141414] p-8 flex flex-col gap-4 hover:bg-[#141414] hover:text-[#E4E3E0] transition-colors cursor-default">
-                <Newspaper className="w-8 h-8" />
-                <h3 className="font-serif font-semibold text-xl">Tin tức & Tâm lý</h3>
-                <p className="text-sm opacity-80">Đánh giá tâm lý thị trường qua phân tích tin tức tự động bằng AI.</p>
-              </div>
+              <TopStocks onSelectStock={handleSelectStock} />
             </motion.div>
           )}
 
@@ -97,10 +233,14 @@ export default function App() {
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="flex flex-col items-center justify-center py-24 gap-4"
+              className="flex flex-col items-center justify-center py-24 gap-4 text-center"
             >
               <Loader2 className="w-12 h-12 animate-spin" />
-              <p className="font-serif font-medium text-lg">Đang phân tích dữ liệu thị trường cho {currentSymbol}...</p>
+              <div className="space-y-2">
+                <p className="font-serif font-medium text-lg">Đang phân tích dữ liệu thị trường cho {currentSymbol}...</p>
+                <p className="text-sm opacity-60 italic">Hệ thống đang quét dữ liệu chuyên sâu từ nhiều nguồn, quá trình này có thể mất 15-30 giây. Vui lòng đợi trong giây lát.</p>
+              </div>
+              <LoadingQuote />
             </motion.div>
           )}
 
@@ -116,6 +256,7 @@ export default function App() {
 
           {currentSymbol && !loading && analysis && (
             <motion.div 
+              id="pdf-content"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               className="mt-8 space-y-8"
@@ -126,37 +267,54 @@ export default function App() {
                   <div className="text-xs uppercase tracking-widest opacity-60 mt-2">Generated by Gemini AI</div>
                 </div>
                 
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap items-center gap-2 print:hidden">
+                  <button 
+                    onClick={handleExportPDF}
+                    disabled={isExporting}
+                    className="px-4 py-2 text-sm font-mono border border-[#141414] hover:bg-gray-100 transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                    title="Xuất PDF"
+                  >
+                    {isExporting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
+                    {isExporting ? 'Đang xuất...' : 'Xuất PDF'}
+                  </button>
+                  <button 
+                    onClick={() => triggerSearch(currentSymbol!)}
+                    className="px-4 py-2 text-sm font-mono border border-[#141414] hover:bg-gray-100 transition-colors flex items-center gap-2 cursor-pointer"
+                    title="Làm mới dữ liệu"
+                  >
+                    <Loader2 className={cn("w-3 h-3", loading && "animate-spin")} />
+                    Làm mới
+                  </button>
                   <button 
                     onClick={() => setActiveTab('overview')}
-                    className={cn("px-4 py-2 text-sm font-mono border border-[#141414] transition-colors", activeTab === 'overview' ? "bg-[#141414] text-[#E4E3E0]" : "hover:bg-gray-100")}
+                    className={cn("px-4 py-2 text-sm font-mono border border-[#141414] transition-colors cursor-pointer", activeTab === 'overview' ? "bg-[#141414] text-[#E4E3E0]" : "hover:bg-gray-100")}
                   >
                     Tổng quan
                   </button>
                   <button 
                     onClick={() => setActiveTab('fundamentals')}
-                    className={cn("px-4 py-2 text-sm font-mono border border-[#141414] transition-colors", activeTab === 'fundamentals' ? "bg-[#141414] text-[#E4E3E0]" : "hover:bg-gray-100")}
+                    className={cn("px-4 py-2 text-sm font-mono border border-[#141414] transition-colors cursor-pointer", activeTab === 'fundamentals' ? "bg-[#141414] text-[#E4E3E0]" : "hover:bg-gray-100")}
                   >
                     Tài chính
                   </button>
                   <button 
                     onClick={() => setActiveTab('news')}
-                    className={cn("px-4 py-2 text-sm font-mono border border-[#141414] transition-colors", activeTab === 'news' ? "bg-[#141414] text-[#E4E3E0]" : "hover:bg-gray-100")}
+                    className={cn("px-4 py-2 text-sm font-mono border border-[#141414] transition-colors cursor-pointer", activeTab === 'news' ? "bg-[#141414] text-[#E4E3E0]" : "hover:bg-gray-100")}
                   >
                     Tin tức
                   </button>
                   <button 
                     onClick={() => setActiveTab('capital')}
-                    className={cn("px-4 py-2 text-sm font-mono border border-[#141414] transition-colors", activeTab === 'capital' ? "bg-[#141414] text-[#E4E3E0]" : "hover:bg-gray-100")}
+                    className={cn("px-4 py-2 text-sm font-mono border border-[#141414] transition-colors cursor-pointer", activeTab === 'capital' ? "bg-[#141414] text-[#E4E3E0]" : "hover:bg-gray-100")}
                   >
                     Tăng vốn
                   </button>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 print:block">
                 {/* Sidebar Stats */}
-                <div className="lg:col-span-1 space-y-6">
+                <div className="lg:col-span-1 space-y-6 print:hidden">
                   <div className="border border-[#141414] p-4">
                     <div className="text-[10px] uppercase tracking-wider opacity-50 mb-1">Market Status</div>
                     <div className="flex items-center gap-2">
@@ -176,7 +334,7 @@ export default function App() {
                 </div>
 
                 {/* Main Content */}
-                <div className="lg:col-span-3">
+                <div className="lg:col-span-3 print:w-full">
                   {activeTab === 'overview' && (
                     <div className="space-y-8">
                       {/* Key Info Section */}
@@ -218,13 +376,16 @@ export default function App() {
                         prose-strong:font-semibold prose-strong:text-[#141414]
                         prose-ul:list-disc prose-ul:pl-5 prose-ul:mb-6 prose-ul:space-y-2
                         prose-li:text-gray-800 prose-li:leading-relaxed
+                        prose-table:hidden
                         bg-white border border-[#141414] p-6 md:p-8">
-                        <Markdown>
-                          {analysis.analysisMarkdown
-                            .replace(/\\n/g, '\n')
-                            .replace(/(## .*?)\n+/g, '$1\n\n')
-                            .replace(/\n+(## )/g, '\n\n$1')}
-                        </Markdown>
+                        <div className="markdown-body">
+                          <Markdown remarkPlugins={[remarkGfm]}>
+                            {analysis.analysisMarkdown
+                              .replace(/\\n/g, '\n')
+                              .replace(/(#+ .*?)\n+/g, '$1\n\n')
+                              .replace(/\n+(#+ )/g, '\n\n$1')}
+                          </Markdown>
+                        </div>
                       </div>
 
                       {/* Analyst Reports Section */}
