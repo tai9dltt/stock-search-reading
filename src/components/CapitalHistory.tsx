@@ -19,10 +19,14 @@ export function CapitalHistory({ symbol }: { symbol: string }) {
           setLoading(false);
         }
       })
-      .catch((err) => {
+      .catch((err: any) => {
         if (isMounted) {
           console.error(err);
-          setError('Không thể tải lịch sử tăng vốn.');
+          if (err?.status === 429 || err?.message?.includes('429') || err?.message?.includes('RESOURCE_EXHAUSTED')) {
+            setError('Hệ thống đang quá tải hoặc đã hết hạn mức API. Vui lòng thử lại sau ít phút.');
+          } else {
+            setError('Không thể tải lịch sử tăng vốn.');
+          }
           setLoading(false);
         }
       });

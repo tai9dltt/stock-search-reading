@@ -3,7 +3,7 @@ import { BarChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveCo
 import { generateFundamentalData } from '../lib/chartData';
 import { cn } from '../lib/utils';
 
-export function FundamentalChart({ symbol }: { symbol: string }) {
+export function FundamentalChart({ symbol, isExporting }: { symbol: string, isExporting?: boolean }) {
   const [period, setPeriod] = useState<'QUARTER' | 'YEAR'>('YEAR');
   const [view, setView] = useState<'ABSOLUTE' | 'GROWTH'>('ABSOLUTE');
 
@@ -16,7 +16,7 @@ export function FundamentalChart({ symbol }: { symbol: string }) {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <h3 className="font-serif font-bold text-2xl">Chỉ số tài chính</h3>
         
-        <div className="flex flex-wrap gap-4">
+        <div className="flex flex-wrap gap-4 print:hidden">
           <div className="flex gap-2">
             <button
               onClick={() => setView('ABSOLUTE')}
@@ -66,9 +66,9 @@ export function FundamentalChart({ symbol }: { symbol: string }) {
                 }}
               />
               <Legend wrapperStyle={{ fontSize: '12px', fontFamily: 'monospace' }} />
-              <Bar yAxisId="left" dataKey="revenue" name="Doanh thu" fill="#141414" radius={[2, 2, 0, 0]} />
-              <Bar yAxisId="left" dataKey="profit" name="LNST" fill="#3b82f6" radius={[2, 2, 0, 0]} />
-              <Line yAxisId="right" type="monotone" dataKey="margin" name="Biên lợi nhuận" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 4 }} />
+              <Bar yAxisId="left" dataKey="revenue" name="Doanh thu" fill="#141414" radius={[2, 2, 0, 0]} isAnimationActive={!isExporting} />
+              <Bar yAxisId="left" dataKey="profit" name="LNST" fill="#3b82f6" radius={[2, 2, 0, 0]} isAnimationActive={!isExporting} />
+              <Line yAxisId="right" type="monotone" dataKey="margin" name="Biên lợi nhuận" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 4 }} isAnimationActive={!isExporting} />
             </ComposedChart>
           ) : (
             <BarChart data={data} margin={{ top: 20, right: 20, bottom: 5, left: 0 }}>
@@ -81,8 +81,8 @@ export function FundamentalChart({ symbol }: { symbol: string }) {
                 formatter={(value: number, name: string) => [`${value}%`, name]}
               />
               <Legend wrapperStyle={{ fontSize: '12px', fontFamily: 'monospace' }} />
-              <Bar dataKey="revGrowth" name="Tăng trưởng Doanh thu" fill="#141414" radius={[2, 2, 0, 0]} />
-              <Bar dataKey="profitGrowth" name="Tăng trưởng LNST" fill="#3b82f6" radius={[2, 2, 0, 0]} />
+              <Bar dataKey="revGrowth" name="Tăng trưởng Doanh thu" fill="#141414" radius={[2, 2, 0, 0]} isAnimationActive={!isExporting} />
+              <Bar dataKey="profitGrowth" name="Tăng trưởng LNST" fill="#3b82f6" radius={[2, 2, 0, 0]} isAnimationActive={!isExporting} />
             </BarChart>
           )}
         </ResponsiveContainer>

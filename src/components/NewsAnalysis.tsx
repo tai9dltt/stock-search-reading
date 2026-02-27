@@ -20,10 +20,14 @@ export function NewsAnalysis({ symbol }: { symbol: string }) {
           setLoading(false);
         }
       })
-      .catch((err) => {
+      .catch((err: any) => {
         if (isMounted) {
           console.error(err);
-          setError('Không thể tải phân tích tin tức.');
+          if (err?.status === 429 || err?.message?.includes('429') || err?.message?.includes('RESOURCE_EXHAUSTED')) {
+            setError('Hệ thống đang quá tải hoặc đã hết hạn mức API. Vui lòng thử lại sau ít phút.');
+          } else {
+            setError('Không thể tải phân tích tin tức.');
+          }
           setLoading(false);
         }
       });

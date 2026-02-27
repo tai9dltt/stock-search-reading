@@ -15,15 +15,29 @@ type SortConfig = {
 
 export function TopStocks({ onSelectStock }: TopStocksProps) {
   const [stocks, setStocks] = useState<TopStock[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [sortConfig, setSortConfig] = useState<SortConfig>(null);
+  const [hasLoaded, setHasLoaded] = useState(false);
 
-  useEffect(() => {
-    getTopInterestedStocks().then((data) => {
-      setStocks(data);
-      setLoading(false);
-    });
-  }, []);
+  const loadData = () => {
+    setLoading(true);
+    setError(null);
+    getTopInterestedStocks()
+      .then((data) => {
+        setStocks(data);
+        setLoading(false);
+        setHasLoaded(true);
+      })
+      .catch((err: any) => {
+        if (err?.status === 429 || err?.message?.includes('429') || err?.message?.includes('RESOURCE_EXHAUSTED')) {
+          setError('Hệ thống đang quá tải hoặc đã hết hạn mức API. Vui lòng thử lại sau ít phút.');
+        } else {
+          setError('Không thể tải danh sách cổ phiếu lúc này.');
+        }
+        setLoading(false);
+      });
+  };
 
   const parseValue = (val: string) => {
     // Remove non-numeric characters except dots and minus signs
@@ -66,12 +80,46 @@ export function TopStocks({ onSelectStock }: TopStocksProps) {
       : <ArrowDown className="w-3 h-3 text-[#141414]" />;
   };
 
+  if (!hasLoaded && !loading && !error) {
+    return (
+      <div className="mt-8 max-w-xl mx-auto border border-[#141414] bg-white p-8 flex flex-col items-center justify-center text-center rounded-lg shadow-sm">
+        <TrendingUp className="w-12 h-12 mb-4 opacity-20" />
+        <h2 className="font-serif font-bold text-xl md:text-2xl mb-3">Top 30 Cổ phiếu Tâm điểm</h2>
+        <p className="text-sm opacity-70 mb-6 max-w-md leading-relaxed">
+          Khám phá danh sách các cổ phiếu đang được thị trường quan tâm nhất hôm nay dựa trên biến động giá, khối lượng giao dịch và dòng tiền khối ngoại.
+        </p>
+        <button 
+          onClick={loadData}
+          className="bg-[#141414] text-white px-6 py-3 font-mono text-xs uppercase tracking-widest hover:bg-[#141414]/80 transition-all flex items-center gap-2 cursor-pointer rounded-sm"
+        >
+          <Activity className="w-4 h-4" />
+          Tải dữ liệu ngay
+        </button>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-4">
         <Loader2 className="w-10 h-10 animate-spin" />
         <p className="font-serif font-medium text-lg">Đang cập nhật danh sách 30 cổ phiếu tâm điểm...</p>
         <LoadingQuote />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="mt-8 p-8 border border-red-200 bg-red-50 text-red-700 rounded-lg text-center flex flex-col items-center">
+        <ShieldAlert className="w-10 h-10 mb-4 opacity-50" />
+        <p className="font-medium mb-6">{error}</p>
+        <button 
+          onClick={loadData}
+          className="bg-red-700 text-white px-6 py-2 font-mono text-xs uppercase tracking-widest hover:bg-red-800 transition-colors cursor-pointer rounded-sm"
+        >
+          Thử lại
+        </button>
       </div>
     );
   }

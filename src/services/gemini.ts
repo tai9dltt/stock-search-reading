@@ -73,7 +73,10 @@ export async function analyzeStock(symbol: string): Promise<StockOverview> {
       },
     });
     rawData = flashResponse.text || "Không có dữ liệu thô.";
-  } catch (e) {
+  } catch (e: any) {
+    if (e?.status === 429 || e?.message?.includes('429') || e?.message?.includes('RESOURCE_EXHAUSTED')) {
+      throw e;
+    }
     console.error("Lỗi khi cào dữ liệu thô bằng Flash:", e);
     rawData = "Không thể lấy dữ liệu thô, hãy tự phân tích dựa trên kiến thức hiện có.";
   }
@@ -236,7 +239,10 @@ export async function analyzeStock(symbol: string): Promise<StockOverview> {
     const result = JSON.parse(response.text || "{}");
     setCachedData(cacheKey, result);
     return result;
-  } catch (e) {
+  } catch (e: any) {
+    if (e?.status === 429 || e?.message?.includes('429') || e?.message?.includes('RESOURCE_EXHAUSTED')) {
+      throw e;
+    }
     console.error("Failed to parse JSON", e);
     return {
       analysisMarkdown: "Không thể phân tích dữ liệu lúc này.",
@@ -299,7 +305,10 @@ export async function analyzeCapitalHistory(symbol: string): Promise<CapitalEven
     const result = JSON.parse(response.text || "[]");
     setCachedData(cacheKey, result);
     return result;
-  } catch (e) {
+  } catch (e: any) {
+    if (e?.status === 429 || e?.message?.includes('429') || e?.message?.includes('RESOURCE_EXHAUSTED')) {
+      throw e;
+    }
     console.error("Failed to parse JSON", e);
     return [];
   }
@@ -378,7 +387,10 @@ export async function getTopInterestedStocks(): Promise<TopStock[]> {
     const result = JSON.parse(response.text || "[]");
     setCachedData(cacheKey, result);
     return result;
-  } catch (e) {
+  } catch (e: any) {
+    if (e?.status === 429 || e?.message?.includes('429') || e?.message?.includes('RESOURCE_EXHAUSTED')) {
+      throw e;
+    }
     console.error("Failed to parse JSON", e);
     return [];
   }
@@ -446,7 +458,10 @@ export async function analyzeNews(symbol: string): Promise<NewsAnalysis> {
     const result = JSON.parse(response.text || "{}");
     setCachedData(cacheKey, result);
     return result;
-  } catch (e) {
+  } catch (e: any) {
+    if (e?.status === 429 || e?.message?.includes('429') || e?.message?.includes('RESOURCE_EXHAUSTED')) {
+      throw e;
+    }
     console.error("Failed to parse JSON", e);
     return {
       sentiment: 'NEUTRAL',

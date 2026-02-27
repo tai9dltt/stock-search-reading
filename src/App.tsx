@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, TrendingUp, BarChart3, Newspaper, Loader2, ArrowUpRight, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { analyzeStock, StockOverview } from './services/gemini';
 import Markdown from 'react-markdown';
@@ -18,6 +18,13 @@ type Tab = 'overview' | 'fundamentals' | 'news' | 'capital';
 export function LoadingQuote() {
   const [quoteIndex, setQuoteIndex] = useState(() => Math.floor(Math.random() * BUDDHIST_QUOTES.length));
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setQuoteIndex((prev) => (prev + 1) % BUDDHIST_QUOTES.length);
+    }, 45000);
+    return () => clearInterval(interval);
+  }, []);
+
   const handlePrev = () => {
     setQuoteIndex((prev) => (prev - 1 + BUDDHIST_QUOTES.length) % BUDDHIST_QUOTES.length);
   };
@@ -27,10 +34,10 @@ export function LoadingQuote() {
   };
 
   return (
-    <div className="mt-12 max-w-lg mx-auto p-6 border border-[#141414]/20 bg-white/50 rounded-lg shadow-sm">
-      <div className="text-[10px] uppercase tracking-widest opacity-50 mb-4 font-mono">Góc tĩnh tâm (Kinh điển Nguyên thủy)</div>
+    <div className="mt-12 w-full max-w-3xl mx-auto p-6 md:p-8 border border-[#141414]/20 bg-white/50 rounded-lg shadow-sm">
+      <div className="text-[10px] uppercase tracking-widest opacity-50 mb-4 font-mono text-center">Góc tĩnh tâm</div>
       
-      <div className="relative px-8 min-h-[100px] flex items-center justify-center">
+      <div className="relative px-10 min-h-[160px] md:min-h-[120px] flex items-center justify-center">
         <button 
           onClick={handlePrev}
           className="absolute left-0 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-[#141414] transition-colors cursor-pointer"
@@ -44,7 +51,7 @@ export function LoadingQuote() {
             key={quoteIndex}
             initial={{ opacity: 0, y: 5 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -5 }}
+            exit={{ opacity: 0, y: -5 }} 
             transition={{ duration: 0.3 }}
             className="font-serif text-lg md:text-xl leading-relaxed italic text-gray-800"
           >
@@ -61,7 +68,7 @@ export function LoadingQuote() {
         </button>
       </div>
 
-      <div className="mt-6 flex justify-center gap-1.5 flex-wrap max-w-xs mx-auto">
+      <div className="mt-8 flex justify-center gap-1.5 flex-wrap max-w-lg mx-auto">
         {BUDDHIST_QUOTES.map((_, idx) => (
           <div 
             key={idx} 
@@ -98,8 +105,12 @@ export default function App() {
     try {
       const result = await analyzeStock(searchSymbol);
       setAnalysis(result);
-    } catch (err) {
-      setError('Đã có lỗi xảy ra khi phân tích. Vui lòng thử lại.');
+    } catch (err: any) {
+      if (err?.status === 429 || err?.message?.includes('429') || err?.message?.includes('RESOURCE_EXHAUSTED')) {
+        setError('Hệ thống đang quá tải hoặc đã hết hạn mức API (Quota Exceeded). Vui lòng thử lại sau ít phút.');
+      } else {
+        setError('Đã có lỗi xảy ra khi phân tích. Vui lòng thử lại.');
+      }
       console.error(err);
     } finally {
       setLoading(false);
@@ -113,11 +124,27 @@ export default function App() {
   };
 
   const handleExportPDF = async () => {
-    const element = document.getElementById('pdf-content');
-    if (!element || !currentSymbol) return;
+    if (!currentSymbol) return;
     
     setIsExporting(true);
+    
+    // Wait for React to render the chart and Recharts to finish its animation
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    const element = document.getElementById('pdf-content');
+    if (!element) {
+      setIsExporting(false);
+      return;
+    }
+    
     try {
+      // Create a wrapper to hide the clone off-screen
+      const wrapper = document.createElement('div');
+      wrapper.style.position = 'absolute';
+      wrapper.style.left = '-9999px';
+      wrapper.style.top = '0';
+      wrapper.style.width = '1200px';
+
       // Create a temporary clone of the element to format it for PDF
       const clone = element.cloneNode(true) as HTMLElement;
       
@@ -125,9 +152,6 @@ export default function App() {
       clone.style.width = '1200px'; // Force desktop width
       clone.style.padding = '40px';
       clone.style.backgroundColor = '#E4E3E0';
-      clone.style.position = 'absolute';
-      clone.style.left = '-9999px';
-      clone.style.top = '0';
       
       // Remove elements we don't want in the PDF
       const hiddenElements = clone.querySelectorAll('.print\\:hidden');
@@ -139,7 +163,11 @@ export default function App() {
         (el as HTMLElement).style.gridColumn = 'span 4 / span 4';
       });
       
-      document.body.appendChild(clone);
+      wrapper.appendChild(clone);
+      document.body.appendChild(wrapper);
+      
+      // Wait for browser to calculate layout and load any fonts/images
+      await new Promise(resolve => setTimeout(resolve, 300));
       
       const dataUrl = await toPng(clone, {
         cacheBust: true,
@@ -151,7 +179,11 @@ export default function App() {
         }
       });
       
-      document.body.removeChild(clone);
+      document.body.removeChild(wrapper);
+      
+      if (dataUrl === 'data:,') {
+        throw new Error('Failed to generate image data');
+      }
       
       const pdf = new jsPDF({
         orientation: 'portrait',
@@ -161,8 +193,9 @@ export default function App() {
       
       const img = new Image();
       img.src = dataUrl;
-      await new Promise((resolve) => {
+      await new Promise((resolve, reject) => {
         img.onload = resolve;
+        img.onerror = reject;
       });
       
       const pdfWidth = pdf.internal.pageSize.getWidth();
@@ -238,7 +271,7 @@ export default function App() {
               <Loader2 className="w-12 h-12 animate-spin" />
               <div className="space-y-2">
                 <p className="font-serif font-medium text-lg">Đang phân tích dữ liệu thị trường cho {currentSymbol}...</p>
-                <p className="text-sm opacity-60 italic">Hệ thống đang quét dữ liệu chuyên sâu từ nhiều nguồn, quá trình này có thể mất 15-30 giây. Vui lòng đợi trong giây lát.</p>
+                <p className="text-sm opacity-60 italic">Quá trình này có thể mất 3 ~ 5 phút. Vui lòng đợi trong giây lát.</p>
               </div>
               <LoadingQuote />
             </motion.div>
@@ -268,47 +301,52 @@ export default function App() {
                 </div>
                 
                 <div className="flex flex-wrap items-center gap-2 print:hidden">
-                  <button 
-                    onClick={handleExportPDF}
-                    disabled={isExporting}
-                    className="px-4 py-2 text-sm font-mono border border-[#141414] hover:bg-gray-100 transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
-                    title="Xuất PDF"
-                  >
-                    {isExporting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
-                    {isExporting ? 'Đang xuất...' : 'Xuất PDF'}
-                  </button>
-                  <button 
-                    onClick={() => triggerSearch(currentSymbol!)}
-                    className="px-4 py-2 text-sm font-mono border border-[#141414] hover:bg-gray-100 transition-colors flex items-center gap-2 cursor-pointer"
-                    title="Làm mới dữ liệu"
-                  >
-                    <Loader2 className={cn("w-3 h-3", loading && "animate-spin")} />
-                    Làm mới
-                  </button>
-                  <button 
-                    onClick={() => setActiveTab('overview')}
-                    className={cn("px-4 py-2 text-sm font-mono border border-[#141414] transition-colors cursor-pointer", activeTab === 'overview' ? "bg-[#141414] text-[#E4E3E0]" : "hover:bg-gray-100")}
-                  >
-                    Tổng quan
-                  </button>
-                  <button 
-                    onClick={() => setActiveTab('fundamentals')}
-                    className={cn("px-4 py-2 text-sm font-mono border border-[#141414] transition-colors cursor-pointer", activeTab === 'fundamentals' ? "bg-[#141414] text-[#E4E3E0]" : "hover:bg-gray-100")}
-                  >
-                    Tài chính
-                  </button>
-                  <button 
-                    onClick={() => setActiveTab('news')}
-                    className={cn("px-4 py-2 text-sm font-mono border border-[#141414] transition-colors cursor-pointer", activeTab === 'news' ? "bg-[#141414] text-[#E4E3E0]" : "hover:bg-gray-100")}
-                  >
-                    Tin tức
-                  </button>
-                  <button 
-                    onClick={() => setActiveTab('capital')}
-                    className={cn("px-4 py-2 text-sm font-mono border border-[#141414] transition-colors cursor-pointer", activeTab === 'capital' ? "bg-[#141414] text-[#E4E3E0]" : "hover:bg-gray-100")}
-                  >
-                    Tăng vốn
-                  </button>
+                  <div className="flex flex-wrap items-center gap-2 mr-2 md:mr-4">
+                    <button 
+                      onClick={() => setActiveTab('overview')}
+                      className={cn("px-4 py-2 text-sm font-mono border border-[#141414] transition-colors cursor-pointer", activeTab === 'overview' ? "bg-[#141414] text-[#E4E3E0]" : "hover:bg-gray-100")}
+                    >
+                      Tổng quan
+                    </button>
+                    <button 
+                      onClick={() => setActiveTab('fundamentals')}
+                      className={cn("px-4 py-2 text-sm font-mono border border-[#141414] transition-colors cursor-pointer", activeTab === 'fundamentals' ? "bg-[#141414] text-[#E4E3E0]" : "hover:bg-gray-100")}
+                    >
+                      Tài chính
+                    </button>
+                    <button 
+                      onClick={() => setActiveTab('news')}
+                      className={cn("px-4 py-2 text-sm font-mono border border-[#141414] transition-colors cursor-pointer", activeTab === 'news' ? "bg-[#141414] text-[#E4E3E0]" : "hover:bg-gray-100")}
+                    >
+                      Tin tức
+                    </button>
+                    <button 
+                      onClick={() => setActiveTab('capital')}
+                      className={cn("px-4 py-2 text-sm font-mono border border-[#141414] transition-colors cursor-pointer", activeTab === 'capital' ? "bg-[#141414] text-[#E4E3E0]" : "hover:bg-gray-100")}
+                    >
+                      Tăng vốn
+                    </button>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button 
+                      onClick={() => triggerSearch(currentSymbol!)}
+                      className="px-4 py-2 text-sm font-mono border border-[#141414] hover:bg-gray-100 transition-colors flex items-center gap-2 cursor-pointer"
+                      title="Làm mới dữ liệu"
+                    >
+                      <Loader2 className={cn("w-3 h-3", loading && "animate-spin")} />
+                      Làm mới
+                    </button>
+                    <button 
+                      onClick={handleExportPDF}
+                      disabled={isExporting}
+                      className="px-4 py-2 text-sm font-mono border border-[#141414] hover:bg-gray-100 transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                      title="Xuất PDF"
+                    >
+                      {isExporting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
+                      {isExporting ? 'Đang xuất...' : 'Xuất PDF'}
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -335,7 +373,7 @@ export default function App() {
 
                 {/* Main Content */}
                 <div className="lg:col-span-3 print:w-full">
-                  {activeTab === 'overview' && (
+                  {(activeTab === 'overview' || isExporting) && (
                     <div className="space-y-8">
                       {/* Key Info Section */}
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -434,15 +472,17 @@ export default function App() {
                     </div>
                   )}
                   
-                  {activeTab === 'fundamentals' && (
-                    <FundamentalChart symbol={currentSymbol} />
+                  {(activeTab === 'fundamentals' || isExporting) && (
+                    <div className={cn(isExporting && activeTab !== 'fundamentals' ? "mt-12" : "")}>
+                      <FundamentalChart symbol={currentSymbol} isExporting={isExporting} />
+                    </div>
                   )}
                   
-                  {activeTab === 'news' && (
+                  {activeTab === 'news' && !isExporting && (
                     <NewsAnalysis symbol={currentSymbol} />
                   )}
                   
-                  {activeTab === 'capital' && (
+                  {activeTab === 'capital' && !isExporting && (
                     <CapitalHistory symbol={currentSymbol} />
                   )}
                 </div>
